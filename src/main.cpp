@@ -3,6 +3,7 @@
 
 #define LINE_AVERAGE_NUMBER 100
 #define LINE_REACTION_VALUE 100
+#define MOTOR_RC 0.25
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
@@ -49,17 +50,19 @@ const int line_5_pin = A3;
 const int line_6_pin = A2;
 const int led = 7;
 const int button_pin = 3;
+
 int l, r;
 
 uint16_t line_value[6], pre_line_value[6];
 uint16_t line_reaction[6];
+int lap = 0;
 
 bool line_tf[6];
 bool button = 0;
 bool main_move = 0;
 
 void line_read();
-void motor_move(int left, int right);
+void motor_move(int left, int right, int wait_time = 0);
 
 void setup() {
       Serial.begin(9600);
@@ -145,6 +148,7 @@ void loop() {
                         digitalWrite(led, LOW);
                         delay(400);
                   }
+                  motor_move(200, 200, 200);
             }
       }
 
@@ -153,42 +157,40 @@ void loop() {
 
       if (main_move) {
             digitalWrite(led, HIGH);
-            if (line_tf[0] || line_tf[1] || (line_tf[2] && !line_tf[3])) l = 0;
-            if (line_tf[2]) r += 1;
-            if (line_tf[1]) r += 2;
-            if (line_tf[0]) r += 3;
-            if ((line_tf[3] && !line_tf[2]) || line_tf[4] || line_tf[5]) r = 0;
-            if (line_tf[3]) l += 1;
-            if (line_tf[4]) l += 2;
-            if (line_tf[5]) l += 3;
 
-            if (line_tf[2] && line_tf[3]) {
-                  l = 375;
-                  r = 375;
+            if (line_tf[1] && line_tf[2] && line_tf[3] && line_tf[0] && line_tf[5]) {
+                  digitalWrite(led, LOW);
+                  lap += 1;
+                  delay(150);
             }
 
-            if (l > 250) l = 250;
-            if (r > 250) r = 250;
-            motor_move(-125 + l, -125 + r);
-            /*
-            if (line_tf[2]) {
-                  motor_move(0, 125);
-            } else if (line_tf[3]) {
-                  motor_move(125, 0);
-            } else if (line_tf[1]) {
-                  motor_move(-50, 125);
-            } else if (line_tf[4]) {
-                  motor_move(125, -50);
-            }else if(line_tf[0]) {
-                  motor_move(-100, 150);
-            }else if (line_tf[5]) {
-                  motor_move(150, -100);
-            }else {
-                  motor_move(100, 100);
-            }*/
+            if (lap == 3) {
+                  motor_move(-200, -200, 300);
+                  main_move = 0;
+            }else{
+                  if (line_tf[0] || line_tf[1] || (line_tf[2] && !line_tf[3])) l = 0;
+                  if (line_tf[2]) r += 1;
+                  if (line_tf[1]) r += 2;
+                  if (line_tf[0]) r += 5;
+                  if ((line_tf[3] && !line_tf[2]) || line_tf[4] || line_tf[5]) r = 0;
+                  if (line_tf[3]) l += 1;
+                  if (line_tf[4]) l += 2;
+                  if (line_tf[5]) l += 5;
+
+                  if (line_tf[2] && line_tf[3]) {
+                        l = 190;
+                        r = 190;
+                  }
+
+                  if (l > 230) l = 230;
+                  if (r > 230) r = 230;
+                  motor_move(-90 + l, -90 + r);
+            }
       } else {
             digitalWrite(led, LOW);
             motor_move(0, 0);
+            lap = 0;
+
             Serial.print(line_tf[0]);
             Serial.print(", ");
             Serial.print(line_tf[1]);
@@ -218,7 +220,12 @@ void line_read() {
       }
 }
 
-void motor_move(int left, int right) {
+void motor_move(int left, int right, int wait_time) {
+      static int pre_left, pre_right;
+      left = left * (1 - MOTOR_RC) + pre_left * MOTOR_RC;
+      right = right * (1 - MOTOR_RC) + pre_right * MOTOR_RC;
+      pre_left = left;
+      pre_right = right;
       if (left > 0) {
             analogWrite(motor_L_1, left);
             analogWrite(motor_L_2, 0);
@@ -233,6 +240,7 @@ void motor_move(int left, int right) {
             analogWrite(motor_R_1, 0);
             analogWrite(motor_R_2, right * -1);
       }
+      if (wait_time != 0) delay(wait_time);
 }
 
 void imu_get() {
