@@ -2,7 +2,7 @@
 #include "MPU6050_6Axis_MotionApps612.h"
 
 #define LINE_AVERAGE_NUMBER 100
-#define LINE_REACTION_VALUE 100
+#define LINE_REACTION_VALUE 10
 #define MOTOR_RC 0.25
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -80,7 +80,7 @@ void setup() {
                   line_reaction[count] += line_value[count];
             }
             line_reaction[count] /= LINE_AVERAGE_NUMBER;
-            line_reaction[count] += LINE_REACTION_VALUE;
+            line_reaction[count] -= LINE_REACTION_VALUE;
             digitalWrite(led, HIGH);
             delay(50);
             digitalWrite(led, LOW);
@@ -158,16 +158,6 @@ void loop() {
       if (main_move) {
             digitalWrite(led, HIGH);
 
-            if (line_tf[1] && line_tf[2] && line_tf[3] && line_tf[0] && line_tf[5]) {
-                  digitalWrite(led, LOW);
-                  lap += 1;
-                  delay(150);
-            }
-
-            if (lap == 3) {
-                  motor_move(-200, -200, 300);
-                  main_move = 0;
-            }else{
                   if (line_tf[0] || line_tf[1] || (line_tf[2] && !line_tf[3])) l = 0;
                   if (line_tf[2]) r += 1;
                   if (line_tf[1]) r += 2;
@@ -184,13 +174,11 @@ void loop() {
 
                   if (l > 230) l = 230;
                   if (r > 230) r = 230;
-                  motor_move(-90 + l, -90 + r);
-            }
+                  motor_move(255, -255);
       } else {
             digitalWrite(led, LOW);
             motor_move(0, 0);
             lap = 0;
-
             Serial.print(line_tf[0]);
             Serial.print(", ");
             Serial.print(line_tf[1]);
@@ -206,17 +194,17 @@ void loop() {
 }
 
 void line_read() {
-      line_value[0] = analogRead(line_1_pin);
-      line_value[1] = analogRead(line_2_pin);
-      line_value[2] = analogRead(line_3_pin);
-      line_value[3] = analogRead(line_4_pin);
-      line_value[4] = analogRead(line_5_pin);
-      line_value[5] = analogRead(line_6_pin);
+      line_value[0] = analogRead(line_1_pin) * 0.1;
+      line_value[1] = analogRead(line_2_pin) * 0.1;
+      line_value[2] = analogRead(line_3_pin) * 0.1;
+      line_value[3] = analogRead(line_4_pin) * 0.1;
+      line_value[4] = analogRead(line_5_pin) * 0.1;
+      line_value[5] = analogRead(line_6_pin) * 0.1;
       for (int count = 0; count < 6; count++) {
             line_value[count] = (line_value[count] + pre_line_value[count]) / 2;
             pre_line_value[count] = line_value[count];
             line_tf[count] = 0;
-            if (line_value[count] > line_reaction[count]) line_tf[count] = 1;
+            if (line_value[count] < line_reaction[count]) line_tf[count] = 1;
       }
 }
 
