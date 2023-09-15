@@ -2,7 +2,7 @@
 #include "MPU6050_6Axis_MotionApps612.h"
 
 #define LINE_AVERAGE_NUMBER 100
-#define LINE_REACTION_VALUE 10
+#define LINE_REACTION_VALUE 1
 #define MOTOR_RC 0.25
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -158,23 +158,23 @@ void loop() {
       if (main_move) {
             digitalWrite(led, HIGH);
 
-                  if (line_tf[0] || line_tf[1] || (line_tf[2] && !line_tf[3])) l = 0;
+                  if (line_tf[0] || line_tf[1]) l = 0;
                   if (line_tf[2]) r += 1;
                   if (line_tf[1]) r += 2;
-                  if (line_tf[0]) r += 5;
-                  if ((line_tf[3] && !line_tf[2]) || line_tf[4] || line_tf[5]) r = 0;
+                  if (line_tf[0]) r += 3;
+                  if (line_tf[4] || line_tf[5]) r = 0;
                   if (line_tf[3]) l += 1;
                   if (line_tf[4]) l += 2;
-                  if (line_tf[5]) l += 5;
+                  if (line_tf[5]) l += 3;
 
                   if (line_tf[2] && line_tf[3]) {
-                        l = 190;
-                        r = 190;
+                        l = 150;
+                        r = 150;
                   }
 
-                  if (l > 230) l = 230;
-                  if (r > 230) r = 230;
-                  motor_move(255, -255);
+                  if (l > 250) l = 250;
+                  if (r > 250) r = 250;
+                  motor_move(-100 + l, -100 + r);
       } else {
             digitalWrite(led, LOW);
             motor_move(0, 0);
